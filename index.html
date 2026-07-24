@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESO Crafting Helper — Research Timers & Traits</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="app-head">
+        <h1>⚒ ESO Crafting Helper</h1>
+        <p>Track trait research timers, know which traits you can craft, and see times adjusted for your passives &amp; bonuses.</p>
+      </header>
+
+      <nav class="tabs">
+        <button data-tab="timers" class="active">Research Timers</button>
+        <button data-tab="traits">Trait Tracker</button>
+        <button data-tab="settings">Skills &amp; Bonuses</button>
+        <button data-tab="reference">Reference</button>
+      </nav>
+
+      <!-- ================= TIMERS ================= -->
+      <section id="panel-timers" class="panel active">
+        <div class="card">
+          <h2>Start Research</h2>
+          <p class="muted">
+            Research time is based on how many traits you already know for that
+            specific item, then reduced by your passive, ESO Plus and any other
+            bonus (set on the <strong>Skills &amp; Bonuses</strong> tab).
+          </p>
+          <div class="form-grid">
+            <label class="field"><span>Craft</span>
+              <select id="f-craft"></select>
+            </label>
+            <label class="field"><span>Item</span>
+              <select id="f-item"></select>
+            </label>
+            <label class="field"><span>Trait</span>
+              <select id="f-trait"></select>
+            </label>
+            <button class="btn" id="f-start">Start research</button>
+          </div>
+          <p class="muted" id="f-preview" style="margin-top:14px"></p>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">In Progress</h2>
+            <span class="faint">Timers keep running even if you close the page.</span>
+          </div>
+          <div id="active-list" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <!-- ================= TRAIT TRACKER ================= -->
+      <section id="panel-traits" class="panel">
+        <div class="card">
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">Trait Tracker</h2>
+            <label class="field" style="min-width:200px">
+              <span>Craft</span>
+              <select id="m-craft"></select>
+            </label>
+          </div>
+          <p class="muted" style="margin-top:10px">
+            Check off every trait you've already researched. Highlighted cells are
+            currently being researched. The count on the right is what drives your
+            next research time for that item.
+          </p>
+          <div class="matrix-wrap" id="matrix-wrap"></div>
+        </div>
+      </section>
+
+      <!-- ================= SETTINGS ================= -->
+      <section id="panel-settings" class="panel">
+        <div class="card">
+          <h2>Research Passive (per craft)</h2>
+          <p class="muted">
+            Each craft's research passive — Metallurgy, Stitching, Carpentry,
+            Lapidary Research — reduces research time and unlocks more simultaneous
+            research slots. Set the rank you've trained for each.
+          </p>
+          <div class="form-grid" id="passive-settings"></div>
+        </div>
+
+        <div class="card">
+          <h2>Other Bonuses</h2>
+          <div class="toggle-row">
+            <input type="checkbox" id="s-esoplus" />
+            <label for="s-esoplus">ESO&nbsp;Plus membership (−10% research time)</label>
+          </div>
+          <label class="field" style="max-width:260px">
+            <span>Other reduction (%) — for any additional bonus</span>
+            <input type="number" id="s-other" min="0" max="100" step="1" value="0" />
+          </label>
+          <div class="note">
+            <strong>About Champion Points:</strong> the live game has no Champion
+            Point star that reduces trait research time — reductions come from the
+            crafting passive and ESO&nbsp;Plus. This "other reduction" field is here
+            so you can fold in any future buff or event bonus yourself. All
+            reductions stack multiplicatively.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Your Effective Reduction</h2>
+          <div id="reduction-summary" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <div class="card">
+          <h2>Data</h2>
+          <p class="muted">Everything is saved in this browser. Back it up or move it between devices here.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn ghost" id="s-export">Export backup</button>
+            <button class="btn ghost" id="s-import">Import backup</button>
+            <button class="btn danger" id="s-reset">Reset everything</button>
+            <input type="file" id="s-import-file" accept="application/json" style="display:none" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= REFERENCE ================= -->
+      <section id="panel-reference" class="panel">
+        <div class="card">
+          <h2>Research Time by Trait Number</h2>
+          <p class="muted">Base time before any reductions. The 1st trait on an item is fastest; each additional trait doubles, capped at 30 days.</p>
+          <table class="ref">
+            <thead><tr><th>Trait #</th><th>Base time</th></tr></thead>
+            <tbody id="ref-times"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Weapon Traits</h2>
+          <table class="ref">
+            <thead><tr><th>Trait</th><th>Effect</th></tr></thead>
+            <tbody id="ref-weapon"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Armor Traits</h2>
+          <table class="ref">
+            <thead><tr><th>Trait</th><th>Effect</th></tr></thead>
+            <tbody id="ref-armor"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Jewelry Traits</h2>
+          <table class="ref">
+            <thead><tr><th>Trait</th><th>Effect</th></tr></thead>
+            <tbody id="ref-jewelry"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="app-foot">
+        Fan-made helper for Elder Scrolls Online crafting · data stored locally in your browser
+      </footer>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
