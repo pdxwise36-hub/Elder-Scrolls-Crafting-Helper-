@@ -749,11 +749,17 @@
 
   // ----- Motif tracker ----------------------------------------------------
   function allMotifs() {
-    var list = ESO.MOTIFS.map(function (m) { return { name: m.name, stone: m.stone, custom: false }; });
+    var list = ESO.MOTIFS.map(function (m) {
+      return { name: m.name, stone: m.stone, src: m.src || null, custom: false };
+    });
     state.customMotifs.forEach(function (name) {
-      list.push({ name: name, stone: null, custom: true });
+      list.push({ name: name, stone: null, src: null, custom: true });
     });
     return list;
+  }
+
+  function motifFindUrl(name) {
+    return "https://www.google.com/search?q=" + encodeURIComponent("ESO " + name + " motif how to get");
   }
 
   function motifKey(motif, slot) {
@@ -787,11 +793,18 @@
     allMotifs().forEach(function (motif) {
       var count = motifChaptersKnown(motif.name);
       var full = count === slots.length;
+      var tip = motif.custom
+        ? "Custom motif"
+        : (motif.stone ? "Style item: " + motif.stone : "Style item varies") +
+          (motif.src ? " · " + motif.src : "");
       html += "<tr>";
       html +=
-        '<th class="item-col" title="' +
-        (motif.stone ? "Style item: " + motif.stone : "Custom motif") + '">' +
-        motif.name + (full ? " ✓" : "") + "</th>";
+        '<th class="item-col" title="' + tip.replace(/"/g, "&quot;") + '">' +
+        '<div class="motif-name">' + motif.name + (full ? " ✓" : "") +
+        ' <a class="find-link" href="' + motifFindUrl(motif.name) +
+        '" target="_blank" rel="noopener" title="Where to find (opens web search)">↗</a></div>' +
+        (motif.src ? '<div class="motif-src">' + motif.src + "</div>" : "") +
+        "</th>";
       slots.forEach(function (s) {
         var on = !!state.motifs[motifKey(motif.name, s)];
         html +=
