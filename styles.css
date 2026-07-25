@@ -612,6 +612,18 @@ ol.plan-steps {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.total-group {
+  margin-bottom: 16px;
+}
+.total-group h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+}
 .totals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

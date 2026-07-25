@@ -149,7 +149,14 @@
         </div>
 
         <div class="card">
-          <div id="c-totals"></div>
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">Total Shopping List</h2>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="c-copy-status" class="faint" aria-live="polite"></span>
+              <button class="btn ghost sm" id="c-copy" disabled>Copy list</button>
+            </div>
+          </div>
+          <div id="c-totals" style="margin-top:14px"></div>
         </div>
       </section>
 

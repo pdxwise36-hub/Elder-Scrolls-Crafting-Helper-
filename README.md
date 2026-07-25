@@ -48,7 +48,9 @@ all up into a single **total shopping list**:
 
 Base materials default to **150** per item (CP160) and improvement materials to
 **8** per item (guaranteed gold at max Temper Expertise); both are editable so
-the counts match your level and passives.
+the counts match your level and passives. The combined total is grouped into
+**Prime / Quality / Trait / Style Materials** and can be copied to your
+clipboard as a plain-text shopping list to mail to a crafter.
 
 ### 🎨 Motif Tracker
 A grid of motifs with a checkbox for each of the **14 chapters** (one per

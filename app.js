@@ -894,18 +894,89 @@
     var group = groupFor(craft, entry.item);
     var qty = entry.qty;
     var out = [];
-    out.push({ name: group.base, qty: (state.settings.baseCount || 0) * qty });
-    out.push({ name: styleStoneName(entry.style), qty: 1 * qty });
+    out.push({ name: group.base, qty: (state.settings.baseCount || 0) * qty, cat: "Base" });
+    out.push({ name: styleStoneName(entry.style), qty: 1 * qty, cat: "Style" });
     if (entry.trait) {
       var t = ESO.traitsFor(group.traits).filter(function (x) { return x.name === entry.trait; })[0];
-      if (t && t.mat) out.push({ name: t.mat, qty: 1 * qty });
+      if (t && t.mat) out.push({ name: t.mat, qty: 1 * qty, cat: "Trait" });
     }
     var q = ESO.QUALITIES.filter(function (x) { return x.key === entry.quality; })[0];
     if (q && q.improveIndex >= 0) {
       var temper = craft.improvement[q.improveIndex];
-      out.push({ name: temper, qty: (state.settings.temperCount || 0) * qty });
+      out.push({ name: temper, qty: (state.settings.temperCount || 0) * qty, cat: "Quality" });
     }
     return out;
+  }
+
+  // Category order + display labels for the grouped shopping list.
+  var CATEGORY_ORDER = ["Base", "Quality", "Trait", "Style"];
+  var CATEGORY_LABEL = {
+    Base: "Prime Materials",
+    Quality: "Quality Materials",
+    Trait: "Trait Materials",
+    Style: "Style Materials"
+  };
+
+  function groupedTotals() {
+    var g = {};
+    CATEGORY_ORDER.forEach(function (c) { g[c] = {}; });
+    state.craftList.forEach(function (entry) {
+      materialsFor(entry).forEach(function (m) {
+        var cat = m.cat || "Base";
+        g[cat][m.name] = (g[cat][m.name] || 0) + m.qty;
+      });
+    });
+    return g;
+  }
+
+  function buildShoppingText() {
+    var lines = ["ESO Crafting Shopping List", ""];
+    state.craftList.forEach(function (e) {
+      var craft = craftById(e.craft);
+      lines.push(
+        "- " + e.qty + "x " + e.item + " (" + craft.name + ", " + e.style +
+        (e.trait ? ", " + e.trait : "") + ", " + qualityName(e.quality) + ")"
+      );
+    });
+    lines.push("");
+    var g = groupedTotals();
+    CATEGORY_ORDER.forEach(function (cat) {
+      var names = Object.keys(g[cat]);
+      if (!names.length) return;
+      lines.push(CATEGORY_LABEL[cat] + ":");
+      names.sort(function (a, b) { return g[cat][b] - g[cat][a]; }).forEach(function (n) {
+        lines.push("  " + g[cat][n] + "x " + n);
+      });
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+
+  function copyText(text, statusEl) {
+    function done(ok) {
+      if (statusEl) {
+        statusEl.textContent = ok ? "Copied!" : "Press Ctrl/Cmd+C to copy";
+        setTimeout(function () { statusEl.textContent = ""; }, 2500);
+      }
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        done(ok);
+      } catch (e) { done(false); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else {
+      fallback();
+    }
   }
 
   function qualityName(key) {
@@ -917,18 +988,19 @@
     var listWrap = document.getElementById("c-list");
     var totalWrap = document.getElementById("c-totals");
 
+    var copyBtn = document.getElementById("c-copy");
+    if (copyBtn) copyBtn.disabled = state.craftList.length === 0;
+
     if (state.craftList.length === 0) {
       listWrap.innerHTML = '<div class="empty">Nothing queued. Add an item to craft above.</div>';
       totalWrap.innerHTML = "";
       return;
     }
 
-    var totals = {};
     var rows = state.craftList
       .map(function (entry) {
         var craft = craftById(entry.craft);
         var mats = materialsFor(entry);
-        mats.forEach(function (m) { totals[m.name] = (totals[m.name] || 0) + m.qty; });
         var matHtml = mats
           .map(function (m) {
             return '<span class="mat"><span class="mat-q">' + m.qty + "&times;</span> " + m.name + "</span>";
@@ -950,16 +1022,24 @@
       .join("");
     listWrap.innerHTML = rows;
 
-    // grand total shopping list, sorted by quantity desc
-    var totalNames = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; });
-    var totalHtml = totalNames
-      .map(function (name) {
-        return '<div class="total-row"><span class="pill">' + totals[name] +
-          "&times;</span> " + name + "</div>";
-      })
-      .join("");
-    totalWrap.innerHTML =
-      '<h3>Total shopping list</h3><div class="totals-grid">' + totalHtml + "</div>";
+    // grand total shopping list, grouped by category
+    var g = groupedTotals();
+    var html = "";
+    CATEGORY_ORDER.forEach(function (cat) {
+      var names = Object.keys(g[cat]);
+      if (!names.length) return;
+      names.sort(function (a, b) { return g[cat][b] - g[cat][a]; });
+      html += '<div class="total-group"><h4>' + CATEGORY_LABEL[cat] + "</h4>";
+      html += '<div class="totals-grid">';
+      html += names
+        .map(function (name) {
+          return '<div class="total-row"><span class="pill">' + g[cat][name] +
+            "&times;</span> " + name + "</div>";
+        })
+        .join("");
+      html += "</div></div>";
+    });
+    totalWrap.innerHTML = html;
   }
 
   // ----- Rendering: reference ---------------------------------------------
@@ -1147,6 +1227,10 @@
     document.getElementById("c-list").addEventListener("click", function (e) {
       var btn = e.target.closest("button[data-craft-del]");
       if (btn) removeCraftItem(btn.dataset.craftDel);
+    });
+    document.getElementById("c-copy").addEventListener("click", function () {
+      if (state.craftList.length === 0) return;
+      copyText(buildShoppingText(), document.getElementById("c-copy-status"));
     });
     document.getElementById("c-basecount").addEventListener("input", function (e) {
       state.settings.baseCount = Math.max(0, Number(e.target.value) || 0);
