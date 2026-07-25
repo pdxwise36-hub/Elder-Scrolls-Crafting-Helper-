@@ -15,6 +15,7 @@
 
       <nav class="tabs">
         <button data-tab="timers" class="active">Research Timers</button>
+        <button data-tab="plan">Research Plan</button>
         <button data-tab="traits">Trait Tracker</button>
         <button data-tab="settings">Skills &amp; Bonuses</button>
         <button data-tab="reference">Reference</button>
@@ -50,6 +51,52 @@
             <span class="faint">Timers keep running even if you close the page.</span>
           </div>
           <div id="active-list" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <!-- ================= RESEARCH PLAN ================= -->
+      <section id="panel-plan" class="panel">
+        <div class="card">
+          <h2>Build Your Research List</h2>
+          <p class="muted">
+            Add every trait you want to research. The planner works out the order
+            to research them in — spreading items across your research slots — so
+            you finish in the least total time.
+          </p>
+          <div class="form-grid">
+            <label class="field"><span>Craft</span>
+              <select id="p-craft"></select>
+            </label>
+            <label class="field"><span>Item</span>
+              <select id="p-item"></select>
+            </label>
+            <label class="field"><span>Trait</span>
+              <select id="p-trait"></select>
+            </label>
+            <button class="btn" id="p-add">Add to list</button>
+            <button class="btn ghost" id="p-add-all">Add all remaining</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">Your List</h2>
+            <button class="btn ghost sm" id="p-clear">Clear all</button>
+          </div>
+          <div id="p-targets" style="margin-top:14px"></div>
+        </div>
+
+        <div class="card">
+          <h2>Optimal Research Order</h2>
+          <div id="p-summary"></div>
+          <div id="p-plan"></div>
+          <div class="note">
+            Research on one item happens one trait at a time, so your slots let
+            different items run at once. This plan assumes you start now with all
+            slots free — follow the order on the <strong>Research Timers</strong>
+            tab. Within a single item you can research its listed traits in any
+            order; each research's time depends on its position (#), not the trait.
+          </div>
         </div>
       </section>
 

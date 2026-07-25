@@ -17,6 +17,23 @@ Plus, and any other bonus you set. Each timer shows a live countdown, the exact
 finish date/time, and a progress bar. Timers persist across page reloads because
 they're stored with real timestamps.
 
+### 📋 Research Plan (the "shopping list")
+Add every trait you want across any items, and the planner works out the **order
+to research them in for the least total time**. Research on a single item is
+sequential (one trait at a time), but each craft's slots let different items run
+in parallel — so the planner schedules your list across those slots and shows:
+
+- a numbered, ordered research plan per craft with start offset and finish date
+  for every step;
+- the total time to finish everything (and, for contrast, how long it would take
+  done one at a time);
+- times based on your current known traits and bonuses.
+
+It uses list scheduling with a "most work remaining first" priority — a fast,
+near-optimal way to minimize the total finish time. The plan assumes you start
+now with all research slots free, then you follow the order on the Research
+Timers tab.
+
 ### 🧩 Trait Tracker
 A grid of every craftable item vs. every trait. Tick off the traits you've
 already researched. The per-item count (e.g. `4 / 9`) is what determines your

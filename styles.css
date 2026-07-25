@@ -414,6 +414,163 @@ table.ref td.num {
   flex-wrap: wrap;
 }
 
+/* ---------- Research Plan ---------- */
+.plan-craft {
+  margin-bottom: 14px;
+}
+.plan-craft h3 {
+  margin-bottom: 6px;
+}
+.target-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.target-item {
+  min-width: 110px;
+  color: var(--text);
+  font-weight: 600;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border-bright);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 3px 6px 3px 11px;
+  font-size: 12px;
+}
+.chip-x {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 3px;
+  border-radius: 999px;
+}
+.chip-x:hover {
+  color: var(--red);
+}
+
+.plan-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.plan-summary > div {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.plan-summary .big {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  font-variant-numeric: tabular-nums;
+}
+.plan-summary .lbl {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.plan-craft-block {
+  margin-bottom: 18px;
+}
+.plan-craft-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.plan-craft-head h3 {
+  margin: 0;
+}
+ol.plan-steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+}
+.plan-step {
+  counter-increment: step;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px 9px 40px;
+  position: relative;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.plan-step::before {
+  content: counter(step);
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border-bright);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.step-title {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+}
+.step-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.step-time {
+  text-align: right;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.step-start {
+  display: block;
+  color: var(--text-dim);
+}
+.step-start.ready {
+  color: var(--green);
+  font-weight: 700;
+}
+.step-finish {
+  display: block;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
 footer.app-foot {
   text-align: center;
   color: var(--text-faint);

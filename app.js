@@ -15,6 +15,7 @@
   var defaultState = {
     known: {},
     active: [],
+    plan: [], // shopping list: [{ craft, item, trait }]
     settings: {
       passive: { blacksmithing: 4, clothing: 4, woodworking: 4, jewelry: 4 },
       esoPlus: false,
@@ -33,6 +34,7 @@
       return {
         known: parsed.known || {},
         active: parsed.active || [],
+        plan: parsed.plan || [],
         settings: Object.assign(clone(defaultState.settings), parsed.settings || {})
       };
     } catch (e) {
@@ -346,6 +348,8 @@
     renderActive();
     renderForm();
     renderMatrix();
+    renderPlanForm();
+    renderPlan();
   }
 
   // ----- Rendering: trait tracker matrix ----------------------------------
@@ -424,6 +428,314 @@
     }).join("");
   }
 
+  // ----- Research Plan (the "shopping list") ------------------------------
+  var planForm = { craft: "blacksmithing", item: null, trait: null };
+
+  function planHas(craftId, item, trait) {
+    return state.plan.some(function (t) {
+      return t.craft === craftId && t.item === item && t.trait === trait;
+    });
+  }
+
+  // Traits that are valid to add for an item: not already known, not already listed.
+  function addableTraits(craftId, item) {
+    var craft = craftById(craftId);
+    var group = groupFor(craft, item);
+    return ESO.traitsFor(group.traits).filter(function (t) {
+      return !isKnown(craftId, item, t.name) && !planHas(craftId, item, t.name);
+    });
+  }
+
+  function renderPlanForm() {
+    var craft = craftById(planForm.craft);
+
+    var craftSel = document.getElementById("p-craft");
+    craftSel.innerHTML = ESO.CRAFTS.map(function (c) {
+      return '<option value="' + c.id + '">' + c.name + "</option>";
+    }).join("");
+    craftSel.value = planForm.craft;
+
+    var itemSel = document.getElementById("p-item");
+    itemSel.innerHTML = craft.groups
+      .map(function (g) {
+        var opts = g.items
+          .map(function (it) { return '<option value="' + it + '">' + it + "</option>"; })
+          .join("");
+        return '<optgroup label="' + g.name + '">' + opts + "</optgroup>";
+      })
+      .join("");
+    if (!planForm.item || !groupFor(craft, planForm.item)) {
+      planForm.item = craft.groups[0].items[0];
+    }
+    itemSel.value = planForm.item;
+
+    var avail = addableTraits(craft.id, planForm.item);
+    var traitSel = document.getElementById("p-trait");
+    if (avail.length === 0) {
+      traitSel.innerHTML = '<option value="">— all added or known —</option>';
+      planForm.trait = null;
+    } else {
+      traitSel.innerHTML = avail
+        .map(function (t) { return '<option value="' + t.name + '">' + t.name + "</option>"; })
+        .join("");
+      if (!planForm.trait || !avail.some(function (t) { return t.name === planForm.trait; })) {
+        planForm.trait = avail[0].name;
+      }
+      traitSel.value = planForm.trait;
+    }
+    document.getElementById("p-add").disabled = avail.length === 0;
+
+    // convenience: "add all remaining traits for this item"
+    var allBtn = document.getElementById("p-add-all");
+    allBtn.disabled = avail.length === 0;
+    allBtn.textContent = avail.length
+      ? "Add all " + avail.length + " remaining"
+      : "Nothing to add";
+  }
+
+  function addTarget(all) {
+    var craft = craftById(planForm.craft);
+    var traits = all
+      ? addableTraits(craft.id, planForm.item).map(function (t) { return t.name; })
+      : (planForm.trait ? [planForm.trait] : []);
+    traits.forEach(function (name) {
+      if (!planHas(craft.id, planForm.item, name)) {
+        state.plan.push({ craft: craft.id, item: planForm.item, trait: name });
+      }
+    });
+    planForm.trait = null;
+    save();
+    renderPlanForm();
+    renderPlan();
+  }
+
+  function removeTarget(craftId, item, trait) {
+    state.plan = state.plan.filter(function (t) {
+      return !(t.craft === craftId && t.item === item && t.trait === trait);
+    });
+    save();
+    renderPlanForm();
+    renderPlan();
+  }
+
+  function clearPlan() {
+    if (state.plan.length && !confirm("Clear your whole research list?")) return;
+    state.plan = [];
+    save();
+    renderPlanForm();
+    renderPlan();
+  }
+
+  // Schedule the listed targets across each craft's research slots to finish
+  // in the least total time. Research on one item is sequential (one trait at
+  // a time); slots let different items in the same craft run in parallel.
+  // Uses list scheduling with a "most work remaining first" priority — a fast,
+  // near-optimal makespan heuristic. Assumes you start now with all slots free.
+  function buildPlan() {
+    var byCraft = {};
+    state.plan.forEach(function (t) {
+      (byCraft[t.craft] = byCraft[t.craft] || []).push(t);
+    });
+
+    var out = { crafts: [], overallMs: 0, totalSteps: 0, sequentialMs: 0 };
+
+    ESO.CRAFTS.forEach(function (craft) {
+      var targets = byCraft[craft.id];
+      if (!targets || !targets.length) return;
+
+      var perHourMs = reductionMultiplier(craft.id) * HOUR_MS;
+      var slots = slotsFor(craft.id);
+
+      // group picks by item, tier them from current known count upward
+      var itemPicks = {};
+      targets.forEach(function (t) {
+        (itemPicks[t.item] = itemPicks[t.item] || []).push(t.trait);
+      });
+
+      var chains = [];
+      Object.keys(itemPicks).forEach(function (item) {
+        var known = knownCount(craft.id, item);
+        var group = groupFor(craft, item);
+        var canonical = ESO.traitsFor(group.traits).map(function (x) { return x.name; });
+        var picks = itemPicks[item].slice().sort(function (a, b) {
+          return canonical.indexOf(a) - canonical.indexOf(b);
+        });
+        var researches = picks.map(function (trait, i) {
+          var tier = known + 1 + i;
+          return { trait: trait, tier: tier, dur: ESO.baseResearchHours(tier) * perHourMs };
+        });
+        var remaining = researches.reduce(function (s, r) { return s + r.dur; }, 0);
+        out.sequentialMs += remaining;
+        out.totalSteps += researches.length;
+        chains.push({
+          item: item,
+          group: group.name,
+          researches: researches,
+          nextIdx: 0,
+          remainingWork: remaining,
+          busyUntil: 0
+        });
+      });
+
+      // discrete-event simulation of `slots` parallel machines
+      var slotFree = [];
+      for (var s = 0; s < slots; s++) slotFree.push(0);
+      var steps = [];
+      var guard = 0;
+
+      while (guard++ < 20000) {
+        var anyLeft = chains.some(function (c) { return c.nextIdx < c.researches.length; });
+        if (!anyLeft) break;
+
+        // earliest-free slot
+        var sIdx = 0;
+        for (var i = 1; i < slots; i++) if (slotFree[i] < slotFree[sIdx]) sIdx = i;
+        var t = slotFree[sIdx];
+
+        var avail = chains.filter(function (c) {
+          return c.nextIdx < c.researches.length && c.busyUntil <= t;
+        });
+
+        if (avail.length === 0) {
+          // no item free to research yet — idle this slot until one frees
+          var upcoming = chains
+            .filter(function (c) { return c.nextIdx < c.researches.length && c.busyUntil > t; })
+            .map(function (c) { return c.busyUntil; });
+          if (!upcoming.length) break;
+          slotFree[sIdx] = Math.min.apply(null, upcoming);
+          continue;
+        }
+
+        avail.sort(function (a, b) {
+          return (
+            b.remainingWork - a.remainingWork ||
+            b.researches[b.nextIdx].dur - a.researches[a.nextIdx].dur
+          );
+        });
+        var chain = avail[0];
+        var r = chain.researches[chain.nextIdx];
+        var end = t + r.dur;
+        steps.push({
+          item: chain.item,
+          group: chain.group,
+          trait: r.trait,
+          tier: r.tier,
+          dur: r.dur,
+          start: t,
+          end: end
+        });
+        slotFree[sIdx] = end;
+        chain.busyUntil = end;
+        chain.remainingWork -= r.dur;
+        chain.nextIdx++;
+      }
+
+      var makespan = steps.reduce(function (m, x) { return Math.max(m, x.end); }, 0);
+      steps.sort(function (a, b) { return a.start - b.start || b.dur - a.dur; });
+      out.crafts.push({
+        id: craft.id,
+        name: craft.name,
+        passive: craft.passive,
+        slots: slots,
+        steps: steps,
+        makespanMs: makespan
+      });
+      out.overallMs = Math.max(out.overallMs, makespan);
+    });
+
+    return out;
+  }
+
+  function fmtOffset(ms) {
+    return ms <= 0 ? "now" : "in " + fmtDuration(ms);
+  }
+
+  function renderPlan() {
+    // ---- the list of chosen targets ----
+    var tWrap = document.getElementById("p-targets");
+    if (state.plan.length === 0) {
+      tWrap.innerHTML =
+        '<div class="empty">Your list is empty. Add the traits you want above.</div>';
+    } else {
+      var groupedByCraft = {};
+      state.plan.forEach(function (t) {
+        var byItem = (groupedByCraft[t.craft] = groupedByCraft[t.craft] || {});
+        (byItem[t.item] = byItem[t.item] || []).push(t.trait);
+      });
+      var html = "";
+      ESO.CRAFTS.forEach(function (craft) {
+        var items = groupedByCraft[craft.id];
+        if (!items) return;
+        html += '<div class="plan-craft"><h3>' + craft.name + "</h3>";
+        Object.keys(items).forEach(function (item) {
+          html += '<div class="target-row"><span class="target-item">' + item + "</span>";
+          html += '<span class="chips">';
+          items[item].forEach(function (trait) {
+            html +=
+              '<span class="chip">' + trait +
+              '<button class="chip-x" title="Remove" data-craft="' + craft.id +
+              '" data-item="' + item + '" data-trait="' + trait + '">&times;</button></span>';
+          });
+          html += "</span></div>";
+        });
+        html += "</div>";
+      });
+      tWrap.innerHTML = html;
+    }
+
+    // ---- the computed schedule ----
+    var plan = buildPlan();
+    var summary = document.getElementById("p-summary");
+    var planWrap = document.getElementById("p-plan");
+
+    if (state.plan.length === 0) {
+      summary.innerHTML = "";
+      planWrap.innerHTML = "";
+      return;
+    }
+
+    var overallDone = Date.now() + plan.overallMs;
+    summary.innerHTML =
+      '<div class="plan-summary">' +
+      '<div><span class="big">' + fmtDuration(plan.overallMs) + "</span>" +
+      '<span class="lbl">to finish all ' + plan.totalSteps + " researches</span></div>" +
+      '<div><span class="big">' + fmtDateTime(overallDone) + "</span>" +
+      '<span class="lbl">everything done by</span></div>' +
+      '<div><span class="big">' + fmtDuration(plan.sequentialMs) + "</span>" +
+      '<span class="lbl">if done one at a time</span></div>' +
+      "</div>";
+
+    var body = "";
+    plan.crafts.forEach(function (c) {
+      var done = Date.now() + c.makespanMs;
+      body +=
+        '<div class="plan-craft-block">' +
+        '<div class="plan-craft-head"><h3>' + c.name + "</h3>" +
+        '<span class="pill">' + c.slots + " slots · " + fmtDuration(c.makespanMs) +
+        "</span></div>";
+      body += '<ol class="plan-steps">';
+      c.steps.forEach(function (step) {
+        var startAt = Date.now() + step.start;
+        var endAt = Date.now() + step.end;
+        var startCls = step.start <= 0 ? " ready" : "";
+        body +=
+          '<li class="plan-step">' +
+          '<div class="step-main">' +
+          '<span class="step-title">' + step.trait + " &mdash; " + step.item + "</span>" +
+          '<span class="step-sub">trait #' + step.tier + " · " + fmtHours(step.dur / HOUR_MS) +
+          " · " + step.group + "</span>" +
+          "</div>" +
+          '<div class="step-time">' +
+          '<span class="step-start' + startCls + '">start ' + fmtOffset(step.start) + "</span>" +
+          '<span class="step-finish">done ' + fmtDateTime(endAt) + "</span>" +
+          "</div>" +
+          "</li>";
+      });
+      body += "</ol></div>";
+    });
+    planWrap.innerHTML = body;
+  }
+
   // ----- Rendering: reference ---------------------------------------------
   function renderReference() {
     // Research time table
@@ -497,6 +809,10 @@
         state.active = state.active.filter(function (a) {
           return !(a.craft === cb.dataset.craft && a.item === cb.dataset.item && a.trait === cb.dataset.trait);
         });
+        // A known trait can't be a research target — drop it from the plan.
+        state.plan = state.plan.filter(function (p) {
+          return !(p.craft === cb.dataset.craft && p.item === cb.dataset.item && p.trait === cb.dataset.trait);
+        });
       } else {
         delete state.known[key];
       }
@@ -504,6 +820,32 @@
       renderMatrix();
       renderForm();
       renderActive();
+      renderPlanForm();
+      renderPlan();
+    });
+
+    // Research Plan controls
+    document.getElementById("p-craft").addEventListener("change", function (e) {
+      planForm.craft = e.target.value;
+      planForm.item = null;
+      planForm.trait = null;
+      renderPlanForm();
+    });
+    document.getElementById("p-item").addEventListener("change", function (e) {
+      planForm.item = e.target.value;
+      planForm.trait = null;
+      renderPlanForm();
+    });
+    document.getElementById("p-trait").addEventListener("change", function (e) {
+      planForm.trait = e.target.value;
+    });
+    document.getElementById("p-add").addEventListener("click", function () { addTarget(false); });
+    document.getElementById("p-add-all").addEventListener("click", function () { addTarget(true); });
+    document.getElementById("p-clear").addEventListener("click", clearPlan);
+    document.getElementById("p-targets").addEventListener("click", function (e) {
+      var x = e.target.closest("button.chip-x");
+      if (!x) return;
+      removeTarget(x.dataset.craft, x.dataset.item, x.dataset.trait);
     });
 
     // Settings
@@ -514,18 +856,21 @@
       save();
       renderReductionSummary();
       renderForm();
+      renderPlan();
     });
     document.getElementById("s-esoplus").addEventListener("change", function (e) {
       state.settings.esoPlus = e.target.checked;
       save();
       renderReductionSummary();
       renderForm();
+      renderPlan();
     });
     document.getElementById("s-other").addEventListener("input", function (e) {
       state.settings.otherReduction = Number(e.target.value) || 0;
       save();
       renderReductionSummary();
       renderForm();
+      renderPlan();
     });
 
     // Data management
@@ -560,6 +905,7 @@
         state = {
           known: data.known || {},
           active: data.active || [],
+          plan: data.plan || [],
           settings: Object.assign(clone(defaultState.settings), data.settings || {})
         };
         save();
@@ -584,6 +930,8 @@
     renderForm();
     renderActive();
     renderMatrix();
+    renderPlanForm();
+    renderPlan();
     renderSettings();
     renderReference();
   }
