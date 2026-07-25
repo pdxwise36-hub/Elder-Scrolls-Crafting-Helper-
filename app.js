@@ -15,11 +15,16 @@
   var defaultState = {
     known: {},
     active: [],
-    plan: [], // shopping list: [{ craft, item, trait }]
+    plan: [], // research shopping list: [{ craft, item, trait }]
+    motifs: {}, // learned motif chapters: { "Motif|Slot": true }
+    customMotifs: [], // user-added motif names
+    craftList: [], // items to craft: [{ id, craft, item, style, trait|null, quality, qty }]
     settings: {
       passive: { blacksmithing: 4, clothing: 4, woodworking: 4, jewelry: 4 },
       esoPlus: false,
-      otherReduction: 0
+      otherReduction: 0,
+      baseCount: 150, // base mats per item (CP160)
+      temperCount: 8 // improvement mats per item (max Temper Expertise)
     }
   };
 
@@ -35,6 +40,9 @@
         known: parsed.known || {},
         active: parsed.active || [],
         plan: parsed.plan || [],
+        motifs: parsed.motifs || {},
+        customMotifs: parsed.customMotifs || [],
+        craftList: parsed.craftList || [],
         settings: Object.assign(clone(defaultState.settings), parsed.settings || {})
       };
     } catch (e) {
@@ -736,6 +744,224 @@
     planWrap.innerHTML = body;
   }
 
+  // ----- Motif tracker ----------------------------------------------------
+  function allMotifs() {
+    var list = ESO.MOTIFS.map(function (m) { return { name: m.name, stone: m.stone, custom: false }; });
+    state.customMotifs.forEach(function (name) {
+      list.push({ name: name, stone: null, custom: true });
+    });
+    return list;
+  }
+
+  function motifKey(motif, slot) {
+    return motif + "|" + slot;
+  }
+
+  function motifChaptersKnown(motif) {
+    var n = 0;
+    ESO.MOTIF_SLOTS.forEach(function (s) {
+      if (state.motifs[motifKey(motif, s)]) n++;
+    });
+    return n;
+  }
+
+  // Style stone for a motif: its own stone if known, otherwise a generic name.
+  function styleStoneName(motifName) {
+    var m = ESO.MOTIFS.filter(function (x) { return x.name === motifName; })[0];
+    return m && m.stone ? m.stone : motifName + " Style Item";
+  }
+
+  function renderMotifs() {
+    var wrap = document.getElementById("motif-wrap");
+    var slots = ESO.MOTIF_SLOTS;
+    var html = '<table class="matrix"><thead><tr>';
+    html += '<th class="item-col">Motif</th>';
+    slots.forEach(function (s) {
+      html += '<th title="' + s + '">' + s.slice(0, 3) + "</th>";
+    });
+    html += "<th>Known</th><th></th></tr></thead><tbody>";
+
+    allMotifs().forEach(function (motif) {
+      var count = motifChaptersKnown(motif.name);
+      var full = count === slots.length;
+      html += "<tr>";
+      html +=
+        '<th class="item-col" title="' +
+        (motif.stone ? "Style item: " + motif.stone : "Custom motif") + '">' +
+        motif.name + (full ? " ✓" : "") + "</th>";
+      slots.forEach(function (s) {
+        var on = !!state.motifs[motifKey(motif.name, s)];
+        html +=
+          '<td><input type="checkbox" data-motif="' + motif.name +
+          '" data-slot="' + s + '"' + (on ? " checked" : "") + " /></td>";
+      });
+      html += '<td class="count">' + count + "/" + slots.length + "</td>";
+      html +=
+        '<td><button class="link-btn" data-motif-all="' + motif.name + '">' +
+        (full ? "clear" : "all") + "</button>" +
+        (motif.custom
+          ? '<button class="link-btn danger" data-motif-del="' + motif.name + '">del</button>'
+          : "") +
+        "</td>";
+      html += "</tr>";
+    });
+    html += "</tbody></table>";
+    wrap.innerHTML = html;
+  }
+
+  // ----- Crafting list & materials ----------------------------------------
+  var craftForm = { craft: "blacksmithing", item: null, style: null, trait: "", quality: "legendary", qty: 1 };
+
+  function styleOptions() {
+    return allMotifs().map(function (m) { return m.name; });
+  }
+
+  function renderCraftForm() {
+    var craft = craftById(craftForm.craft);
+
+    var craftSel = document.getElementById("c-craft");
+    craftSel.innerHTML = ESO.CRAFTS.map(function (c) {
+      return '<option value="' + c.id + '">' + c.name + "</option>";
+    }).join("");
+    craftSel.value = craftForm.craft;
+
+    var itemSel = document.getElementById("c-item");
+    itemSel.innerHTML = craft.groups
+      .map(function (g) {
+        var opts = g.items
+          .map(function (it) { return '<option value="' + it + '">' + it + "</option>"; })
+          .join("");
+        return '<optgroup label="' + g.name + '">' + opts + "</optgroup>";
+      })
+      .join("");
+    if (!craftForm.item || !groupFor(craft, craftForm.item)) {
+      craftForm.item = craft.groups[0].items[0];
+    }
+    itemSel.value = craftForm.item;
+
+    var styleSel = document.getElementById("c-style");
+    styleSel.innerHTML = styleOptions()
+      .map(function (s) { return '<option value="' + s + '">' + s + "</option>"; })
+      .join("");
+    if (!craftForm.style || styleOptions().indexOf(craftForm.style) === -1) {
+      craftForm.style = styleOptions()[0];
+    }
+    styleSel.value = craftForm.style;
+
+    var group = groupFor(craft, craftForm.item);
+    var traits = ESO.traitsFor(group.traits);
+    var traitSel = document.getElementById("c-trait");
+    traitSel.innerHTML =
+      '<option value="">No trait</option>' +
+      traits.map(function (t) { return '<option value="' + t.name + '">' + t.name + "</option>"; }).join("");
+    traitSel.value = craftForm.trait;
+
+    var qSel = document.getElementById("c-quality");
+    qSel.innerHTML = ESO.QUALITIES.map(function (q) {
+      return '<option value="' + q.key + '">' + q.name + "</option>";
+    }).join("");
+    qSel.value = craftForm.quality;
+
+    document.getElementById("c-qty").value = craftForm.qty;
+    document.getElementById("c-basecount").value = state.settings.baseCount;
+    document.getElementById("c-tempercount").value = state.settings.temperCount;
+  }
+
+  function addCraftItem() {
+    var now = Date.now();
+    state.craftList.push({
+      id: "c" + now + "-" + Math.floor(Math.random() * 1e6),
+      craft: craftForm.craft,
+      item: craftForm.item,
+      style: craftForm.style,
+      trait: craftForm.trait || null,
+      quality: craftForm.quality,
+      qty: Math.max(1, Number(craftForm.qty) || 1)
+    });
+    save();
+    renderCraftList();
+  }
+
+  function removeCraftItem(id) {
+    state.craftList = state.craftList.filter(function (e) { return e.id !== id; });
+    save();
+    renderCraftList();
+  }
+
+  // Materials for one craft-list entry -> [{ name, qty }]
+  function materialsFor(entry) {
+    var craft = craftById(entry.craft);
+    var group = groupFor(craft, entry.item);
+    var qty = entry.qty;
+    var out = [];
+    out.push({ name: group.base, qty: (state.settings.baseCount || 0) * qty });
+    out.push({ name: styleStoneName(entry.style), qty: 1 * qty });
+    if (entry.trait) {
+      var t = ESO.traitsFor(group.traits).filter(function (x) { return x.name === entry.trait; })[0];
+      if (t && t.mat) out.push({ name: t.mat, qty: 1 * qty });
+    }
+    var q = ESO.QUALITIES.filter(function (x) { return x.key === entry.quality; })[0];
+    if (q && q.improveIndex >= 0) {
+      var temper = craft.improvement[q.improveIndex];
+      out.push({ name: temper, qty: (state.settings.temperCount || 0) * qty });
+    }
+    return out;
+  }
+
+  function qualityName(key) {
+    var q = ESO.QUALITIES.filter(function (x) { return x.key === key; })[0];
+    return q ? q.name : key;
+  }
+
+  function renderCraftList() {
+    var listWrap = document.getElementById("c-list");
+    var totalWrap = document.getElementById("c-totals");
+
+    if (state.craftList.length === 0) {
+      listWrap.innerHTML = '<div class="empty">Nothing queued. Add an item to craft above.</div>';
+      totalWrap.innerHTML = "";
+      return;
+    }
+
+    var totals = {};
+    var rows = state.craftList
+      .map(function (entry) {
+        var craft = craftById(entry.craft);
+        var mats = materialsFor(entry);
+        mats.forEach(function (m) { totals[m.name] = (totals[m.name] || 0) + m.qty; });
+        var matHtml = mats
+          .map(function (m) {
+            return '<span class="mat"><span class="mat-q">' + m.qty + "&times;</span> " + m.name + "</span>";
+          })
+          .join("");
+        return (
+          '<div class="craft-entry">' +
+          '<div class="craft-entry-head">' +
+          '<div><span class="ce-title">' + entry.qty + "&times; " + entry.item +
+          "</span> <span class=\"ce-sub\">" + craft.name + " · " + entry.style +
+          (entry.trait ? " · " + entry.trait : " · no trait") + " · " + qualityName(entry.quality) +
+          "</span></div>" +
+          '<button class="btn ghost sm" data-craft-del="' + entry.id + '">Remove</button>' +
+          "</div>" +
+          '<div class="mats">' + matHtml + "</div>" +
+          "</div>"
+        );
+      })
+      .join("");
+    listWrap.innerHTML = rows;
+
+    // grand total shopping list, sorted by quantity desc
+    var totalNames = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; });
+    var totalHtml = totalNames
+      .map(function (name) {
+        return '<div class="total-row"><span class="pill">' + totals[name] +
+          "&times;</span> " + name + "</div>";
+      })
+      .join("");
+    totalWrap.innerHTML =
+      '<h3>Total shopping list</h3><div class="totals-grid">' + totalHtml + "</div>";
+  }
+
   // ----- Rendering: reference ---------------------------------------------
   function renderReference() {
     // Research time table
@@ -848,6 +1074,91 @@
       removeTarget(x.dataset.craft, x.dataset.item, x.dataset.trait);
     });
 
+    // Motif tracker
+    document.getElementById("motif-wrap").addEventListener("change", function (e) {
+      var cb = e.target;
+      if (cb.type !== "checkbox") return;
+      var key = motifKey(cb.dataset.motif, cb.dataset.slot);
+      if (cb.checked) state.motifs[key] = true;
+      else delete state.motifs[key];
+      save();
+      renderMotifs();
+    });
+    document.getElementById("motif-wrap").addEventListener("click", function (e) {
+      var allBtn = e.target.closest("button[data-motif-all]");
+      var delBtn = e.target.closest("button[data-motif-del]");
+      if (allBtn) {
+        var motif = allBtn.dataset.motifAll;
+        var full = motifChaptersKnown(motif) === ESO.MOTIF_SLOTS.length;
+        ESO.MOTIF_SLOTS.forEach(function (s) {
+          if (full) delete state.motifs[motifKey(motif, s)];
+          else state.motifs[motifKey(motif, s)] = true;
+        });
+        save();
+        renderMotifs();
+      } else if (delBtn) {
+        var name = delBtn.dataset.motifDel;
+        state.customMotifs = state.customMotifs.filter(function (n) { return n !== name; });
+        ESO.MOTIF_SLOTS.forEach(function (s) { delete state.motifs[motifKey(name, s)]; });
+        save();
+        renderMotifs();
+        renderCraftForm();
+      }
+    });
+    document.getElementById("motif-add").addEventListener("click", function () {
+      var inp = document.getElementById("motif-add-name");
+      var name = (inp.value || "").trim();
+      if (!name) return;
+      var exists = allMotifs().some(function (m) { return m.name.toLowerCase() === name.toLowerCase(); });
+      if (!exists) {
+        state.customMotifs.push(name);
+        save();
+        renderMotifs();
+        renderCraftForm();
+      }
+      inp.value = "";
+    });
+
+    // Crafting list
+    document.getElementById("c-craft").addEventListener("change", function (e) {
+      craftForm.craft = e.target.value;
+      craftForm.item = null;
+      craftForm.trait = "";
+      renderCraftForm();
+    });
+    document.getElementById("c-item").addEventListener("change", function (e) {
+      craftForm.item = e.target.value;
+      craftForm.trait = "";
+      renderCraftForm();
+    });
+    document.getElementById("c-style").addEventListener("change", function (e) { craftForm.style = e.target.value; });
+    document.getElementById("c-trait").addEventListener("change", function (e) { craftForm.trait = e.target.value; });
+    document.getElementById("c-quality").addEventListener("change", function (e) { craftForm.quality = e.target.value; });
+    document.getElementById("c-qty").addEventListener("input", function (e) {
+      craftForm.qty = Math.max(1, Number(e.target.value) || 1);
+    });
+    document.getElementById("c-add").addEventListener("click", addCraftItem);
+    document.getElementById("c-clear").addEventListener("click", function () {
+      if (state.craftList.length && !confirm("Clear the whole crafting list?")) return;
+      state.craftList = [];
+      save();
+      renderCraftList();
+    });
+    document.getElementById("c-list").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-craft-del]");
+      if (btn) removeCraftItem(btn.dataset.craftDel);
+    });
+    document.getElementById("c-basecount").addEventListener("input", function (e) {
+      state.settings.baseCount = Math.max(0, Number(e.target.value) || 0);
+      save();
+      renderCraftList();
+    });
+    document.getElementById("c-tempercount").addEventListener("input", function (e) {
+      state.settings.temperCount = Math.max(0, Number(e.target.value) || 0);
+      save();
+      renderCraftList();
+    });
+
     // Settings
     document.getElementById("passive-settings").addEventListener("change", function (e) {
       var sel = e.target.closest("select.passive-sel");
@@ -906,6 +1217,9 @@
           known: data.known || {},
           active: data.active || [],
           plan: data.plan || [],
+          motifs: data.motifs || {},
+          customMotifs: data.customMotifs || [],
+          craftList: data.craftList || [],
           settings: Object.assign(clone(defaultState.settings), data.settings || {})
         };
         save();
@@ -932,6 +1246,9 @@
     renderMatrix();
     renderPlanForm();
     renderPlan();
+    renderMotifs();
+    renderCraftForm();
+    renderCraftList();
     renderSettings();
     renderReference();
   }

@@ -34,6 +34,29 @@ near-optimal way to minimize the total finish time. The plan assumes you start
 now with all research slots free, then you follow the order on the Research
 Timers tab.
 
+### 🧵 Crafting List (materials shopping list)
+Add each item you plan to craft — craft, item, **style (motif)**, trait, quality
+and quantity — and it lists exactly what materials each one needs, then rolls it
+all up into a single **total shopping list**:
+
+- base materials (Rubedite Ingot, Ancestor Silk, Rubedo Leather, Sanded Ruby Ash,
+  Platinum Ounce) named per craft/armor weight;
+- 1 style stone per item (named from the chosen motif, e.g. Redguard → Starmetal);
+- 1 trait stone per item (e.g. Divines → Sapphire, Nirnhoned → Potent Nirncrux);
+- quality-improvement material for the chosen tier (e.g. Legendary → Tempering
+  Alloy for Blacksmithing).
+
+Base materials default to **150** per item (CP160) and improvement materials to
+**8** per item (guaranteed gold at max Temper Expertise); both are editable so
+the counts match your level and passives.
+
+### 🎨 Motif Tracker
+A grid of motifs with a checkbox for each of the **14 chapters** (one per
+equipment slot). Tick what you've learned; a motif reads as fully known at 14/14,
+and *all* marks a whole motif at once. Comes preloaded with the racial styles
+plus common motifs (Ancient Elf, Daedric, Dwemer, Glass, Xivkyn), and you can add
+any other motif by name.
+
 ### 🧩 Trait Tracker
 A grid of every craftable item vs. every trait. Tick off the traits you've
 already researched. The per-item count (e.g. `4 / 9`) is what determines your

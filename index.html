@@ -16,7 +16,9 @@
       <nav class="tabs">
         <button data-tab="timers" class="active">Research Timers</button>
         <button data-tab="plan">Research Plan</button>
+        <button data-tab="craft">Crafting List</button>
         <button data-tab="traits">Trait Tracker</button>
+        <button data-tab="motifs">Motifs</button>
         <button data-tab="settings">Skills &amp; Bonuses</button>
         <button data-tab="reference">Reference</button>
       </nav>
@@ -100,6 +102,57 @@
         </div>
       </section>
 
+      <!-- ================= CRAFTING LIST ================= -->
+      <section id="panel-craft" class="panel">
+        <div class="card">
+          <h2>What Do You Need to Craft?</h2>
+          <p class="muted">
+            Add each item you plan to craft — with its style, trait and quality —
+            and see the materials it needs, plus a combined shopping list for
+            everything.
+          </p>
+          <div class="form-grid">
+            <label class="field"><span>Craft</span><select id="c-craft"></select></label>
+            <label class="field"><span>Item</span><select id="c-item"></select></label>
+            <label class="field"><span>Style (motif)</span><select id="c-style"></select></label>
+            <label class="field"><span>Trait</span><select id="c-trait"></select></label>
+            <label class="field"><span>Quality</span><select id="c-quality"></select></label>
+            <label class="field"><span>Qty</span>
+              <input type="number" id="c-qty" min="1" step="1" value="1" />
+            </label>
+            <button class="btn" id="c-add">Add item</button>
+          </div>
+          <div class="form-grid" style="margin-top:14px;max-width:520px">
+            <label class="field"><span>Base mats per item</span>
+              <input type="number" id="c-basecount" min="0" step="1" value="150" />
+            </label>
+            <label class="field"><span>Improvement mats per item</span>
+              <input type="number" id="c-tempercount" min="0" step="1" value="8" />
+            </label>
+          </div>
+          <div class="note">
+            Every crafted item takes <strong>1 style stone</strong> and (with a
+            trait) <strong>1 trait stone</strong>. Base materials default to
+            <strong>150</strong> for a CP160 item, and improvement materials to
+            <strong>8</strong> per upgrade (guaranteed gold at max Temper
+            Expertise) — adjust both above for your level and passives. Jewelry
+            base-mat counts differ; set your own value if crafting jewelry.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">Crafting List</h2>
+            <button class="btn ghost sm" id="c-clear">Clear all</button>
+          </div>
+          <div id="c-list" style="margin-top:14px"></div>
+        </div>
+
+        <div class="card">
+          <div id="c-totals"></div>
+        </div>
+      </section>
+
       <!-- ================= TRAIT TRACKER ================= -->
       <section id="panel-traits" class="panel">
         <div class="card">
@@ -116,6 +169,25 @@
             next research time for that item.
           </p>
           <div class="matrix-wrap" id="matrix-wrap"></div>
+        </div>
+      </section>
+
+      <!-- ================= MOTIFS ================= -->
+      <section id="panel-motifs" class="panel">
+        <div class="card">
+          <div class="row-between">
+            <h2 style="border:0;margin:0;padding:0">Learned Motifs</h2>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="motif-add-name" placeholder="Add a motif…" style="min-width:160px" />
+              <button class="btn ghost sm" id="motif-add">Add</button>
+            </div>
+          </div>
+          <p class="muted" style="margin-top:10px">
+            Tick each chapter you've learned (one per equipment slot). A motif
+            is fully known at 14/14. Use <em>all</em> to mark a whole motif at
+            once. Add any motif not listed with the box above.
+          </p>
+          <div class="matrix-wrap" id="motif-wrap"></div>
         </div>
       </section>
 
