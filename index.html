@@ -117,26 +117,38 @@
             <label class="field"><span>Style (motif)</span><select id="c-style"></select></label>
             <label class="field"><span>Trait</span><select id="c-trait"></select></label>
             <label class="field"><span>Quality</span><select id="c-quality"></select></label>
+            <label class="field"><span>Enchant (glyph)</span><select id="c-enchant"></select></label>
             <label class="field"><span>Qty</span>
               <input type="number" id="c-qty" min="1" step="1" value="1" />
             </label>
             <button class="btn" id="c-add">Add item</button>
           </div>
-          <div class="form-grid" style="margin-top:14px;max-width:520px">
+          <div class="form-grid" style="margin-top:14px">
             <label class="field"><span>Base mats per item</span>
               <input type="number" id="c-basecount" min="0" step="1" value="150" />
             </label>
-            <label class="field"><span>Improvement mats per item</span>
-              <input type="number" id="c-tempercount" min="0" step="1" value="8" />
+            <label class="field"><span>Fine (green) mats</span>
+              <input type="number" id="c-tier0" min="0" step="1" value="2" />
+            </label>
+            <label class="field"><span>Superior (blue) mats</span>
+              <input type="number" id="c-tier1" min="0" step="1" value="3" />
+            </label>
+            <label class="field"><span>Epic (purple) mats</span>
+              <input type="number" id="c-tier2" min="0" step="1" value="4" />
+            </label>
+            <label class="field"><span>Legendary (gold) mats</span>
+              <input type="number" id="c-tier3" min="0" step="1" value="8" />
             </label>
           </div>
           <div class="note">
-            Every crafted item takes <strong>1 style stone</strong> and (with a
-            trait) <strong>1 trait stone</strong>. Base materials default to
-            <strong>150</strong> for a CP160 item, and improvement materials to
-            <strong>8</strong> per upgrade (guaranteed gold at max Temper
-            Expertise) — adjust both above for your level and passives. Jewelry
-            base-mat counts differ; set your own value if crafting jewelry.
+            Every crafted item takes <strong>1 style stone</strong>, (with a
+            trait) <strong>1 trait stone</strong>, and (with an enchant)
+            <strong>1 potency + 1 essence + 1 aspect rune</strong>. Improving
+            quality consumes <strong>every tier up to your target</strong> — so a
+            gold item needs Fine + Superior + Epic + Legendary mats. Amounts
+            default to max Temper Expertise; base materials to <strong>150</strong>
+            (CP160). Adjust all counts above for your level and passives (jewelry
+            base-mat counts differ).
           </div>
         </div>
 

@@ -182,7 +182,10 @@
     "Helmets", "Legs", "Maces", "Shields", "Shoulders", "Staves", "Swords"
   ];
 
+  // A fuller catalogue. `stone` is filled where the style material is known;
+  // where left null the app shows a generic "<motif> Style Item".
   var MOTIFS = [
+    // Racial styles
     { name: "Breton", stone: "Molybdenum" },
     { name: "Redguard", stone: "Starmetal" },
     { name: "Orc", stone: "Manganese" },
@@ -193,12 +196,111 @@
     { name: "Wood Elf", stone: "Bone" },
     { name: "Khajiit", stone: "Moonstone" },
     { name: "Imperial", stone: "Nickel" },
+    // Core / faction styles
     { name: "Ancient Elf", stone: "Palladium" },
+    { name: "Barbaric", stone: null },
+    { name: "Primal", stone: null },
     { name: "Daedric", stone: "Daedra Heart" },
     { name: "Dwemer", stone: "Dwemer Frame" },
     { name: "Glass", stone: "Malachite" },
-    { name: "Xivkyn", stone: "Charcoal of Remorse" }
+    { name: "Xivkyn", stone: "Charcoal of Remorse" },
+    { name: "Akaviri", stone: "Goldscale" },
+    { name: "Mercenary", stone: null },
+    { name: "Soul-Shriven", stone: "Azure Plasm" },
+    { name: "Ancient Orc", stone: null },
+    { name: "Yokudan", stone: null },
+    { name: "Ancestral High Elf", stone: null },
+    { name: "Ancestral Nord", stone: null },
+    { name: "Ancestral Orc", stone: null },
+    // Guild / world styles
+    { name: "Thieves Guild", stone: null },
+    { name: "Dark Brotherhood", stone: null },
+    { name: "Outlaw", stone: null },
+    { name: "Order of the Hour", stone: null },
+    { name: "Abah's Watch", stone: null },
+    { name: "Assassin League", stone: null },
+    { name: "Dro-m'Athra", stone: null },
+    { name: "Ebony", stone: null },
+    { name: "Draugr", stone: null },
+    { name: "Bloodforge", stone: null },
+    { name: "Skinchanger", stone: null },
+    { name: "Silken Ring", stone: null },
+    { name: "Hollowjack", stone: null },
+    { name: "Grim Harlequin", stone: null },
+    { name: "Pyandonean", stone: null },
+    { name: "Ashlander", stone: null },
+    { name: "Celestial", stone: null },
+    { name: "Minotaur", stone: null },
+    { name: "Ebonshadow", stone: null },
+    { name: "Fang Lair", stone: null },
+    { name: "Scalecaller", stone: null },
+    { name: "Worm Cult", stone: null },
+    { name: "Buoyant Armiger", stone: null },
+    { name: "Huntsman", stone: null },
+    { name: "Morag Tong", stone: null },
+    { name: "Militant Ordinator", stone: null },
+    { name: "Refabricated", stone: null },
+    { name: "Trinimac", stone: null },
+    { name: "Malacath", stone: null },
+    { name: "Dwarven", stone: null },
+    { name: "Sapiarch", stone: null },
+    { name: "Dead-Water", stone: null },
+    { name: "Honor Guard", stone: null },
+    { name: "Welkynar", stone: null },
+    { name: "Dremora", stone: null },
+    { name: "Silver Dawn", stone: null },
+    { name: "Order of Diagna", stone: null },
+    { name: "Coldsnap", stone: null },
+    { name: "Sunspire", stone: null },
+    { name: "Frostcaster", stone: null },
+    { name: "Apostle", stone: null },
+    { name: "Meridian", stone: null }
   ];
+
+  // ---- Enchanting (glyphs) ------------------------------------------------
+  // A glyph = 1 Potency rune + 1 Essence rune + 1 Aspect rune.
+  // Aspect rune is chosen by quality; potency rune by additive/subtractive.
+  var POTENCY_RUNES = { additive: "Repora", subtractive: "Itade" };
+  var ASPECT_BY_QUALITY = {
+    normal: "Ta",
+    fine: "Jejota",
+    superior: "Denata",
+    epic: "Rekuta",
+    legendary: "Kuta"
+  };
+  // slot: which item category the glyph goes on. essence: essence rune.
+  var GLYPHS = [
+    // Armor glyphs
+    { name: "Glyph of Health", slot: "armor", essence: "Oko", potency: "additive" },
+    { name: "Glyph of Magicka", slot: "armor", essence: "Makko", potency: "additive" },
+    { name: "Glyph of Stamina", slot: "armor", essence: "Deni", potency: "additive" },
+    { name: "Glyph of Prismatic Defense", slot: "armor", essence: "Hakeijo", potency: "additive" },
+    // Weapon glyphs
+    { name: "Glyph of Weapon Damage", slot: "weapon", essence: "Okori", potency: "additive" },
+    { name: "Glyph of Flame Damage", slot: "weapon", essence: "Rakeipa", potency: "additive" },
+    { name: "Glyph of Frost Damage", slot: "weapon", essence: "Dekeipa", potency: "additive" },
+    { name: "Glyph of Shock Damage", slot: "weapon", essence: "Meip", potency: "additive" },
+    { name: "Glyph of Poison Damage", slot: "weapon", essence: "Kuoko", potency: "additive" },
+    { name: "Glyph of Disease Damage", slot: "weapon", essence: "Haoko", potency: "additive" },
+    { name: "Glyph of Absorb Health", slot: "weapon", essence: "Oko", potency: "subtractive" },
+    { name: "Glyph of Absorb Magicka", slot: "weapon", essence: "Makko", potency: "subtractive" },
+    { name: "Glyph of Absorb Stamina", slot: "weapon", essence: "Deni", potency: "subtractive" },
+    // Jewelry glyphs
+    { name: "Glyph of Magicka Recovery", slot: "jewelry", essence: "Makkoma", potency: "additive" },
+    { name: "Glyph of Stamina Recovery", slot: "jewelry", essence: "Denima", potency: "additive" },
+    { name: "Glyph of Health Recovery", slot: "jewelry", essence: "Okoma", potency: "additive" },
+    { name: "Glyph of Increase Physical Harm", slot: "jewelry", essence: "Taderi", potency: "additive" },
+    { name: "Glyph of Increase Spell Harm", slot: "jewelry", essence: "Makderi", potency: "additive" },
+    { name: "Glyph of Reduce Spell Cost", slot: "jewelry", essence: "Makko", potency: "subtractive" },
+    { name: "Glyph of Reduce Feat Cost", slot: "jewelry", essence: "Deni", potency: "subtractive" }
+  ];
+
+  // Map an item's trait-kind to the glyph slot category.
+  function glyphSlotFor(traitKind) {
+    if (traitKind === "weapon") return "weapon";
+    if (traitKind === "jewelry") return "jewelry";
+    return "armor";
+  }
 
   function traitsFor(kind) {
     if (kind === "weapon") return WEAPON_TRAITS;
@@ -217,7 +319,11 @@
     CRAFTS: CRAFTS,
     MOTIF_SLOTS: MOTIF_SLOTS,
     MOTIFS: MOTIFS,
+    GLYPHS: GLYPHS,
+    POTENCY_RUNES: POTENCY_RUNES,
+    ASPECT_BY_QUALITY: ASPECT_BY_QUALITY,
     baseResearchHours: baseResearchHours,
-    traitsFor: traitsFor
+    traitsFor: traitsFor,
+    glyphSlotFor: glyphSlotFor
   };
 })(typeof window !== "undefined" ? window : this);

@@ -43,21 +43,24 @@ all up into a single **total shopping list**:
   Platinum Ounce) named per craft/armor weight;
 - 1 style stone per item (named from the chosen motif, e.g. Redguard → Starmetal);
 - 1 trait stone per item (e.g. Divines → Sapphire, Nirnhoned → Potent Nirncrux);
-- quality-improvement material for the chosen tier (e.g. Legendary → Tempering
-  Alloy for Blacksmithing).
+- **all** quality-improvement materials up to the chosen tier — a fresh item
+  starts white, so a gold item consumes Fine + Superior + Epic + Legendary mats
+  (e.g. Honing Stone → Dwarven Oil → Grain Solvent → Tempering Alloy);
+- enchant runes if you pick a glyph: 1 potency (Repora/Itade), 1 essence (e.g.
+  Okori for Weapon Damage), and 1 aspect rune by quality (Kuta for gold).
 
-Base materials default to **150** per item (CP160) and improvement materials to
-**8** per item (guaranteed gold at max Temper Expertise); both are editable so
-the counts match your level and passives. The combined total is grouped into
-**Prime / Quality / Trait / Style Materials** and can be copied to your
+Base materials default to **150** per item (CP160) and the per-tier improvement
+amounts to **2 / 3 / 4 / 8** (max Temper Expertise); all are editable so the
+counts match your level and passives. The combined total is grouped into **Prime
+/ Quality / Trait / Style / Enchant Materials** and can be copied to your
 clipboard as a plain-text shopping list to mail to a crafter.
 
 ### 🎨 Motif Tracker
 A grid of motifs with a checkbox for each of the **14 chapters** (one per
 equipment slot). Tick what you've learned; a motif reads as fully known at 14/14,
-and *all* marks a whole motif at once. Comes preloaded with the racial styles
-plus common motifs (Ancient Elf, Daedric, Dwemer, Glass, Xivkyn), and you can add
-any other motif by name.
+and *all* marks a whole motif at once. Comes preloaded with ~65 motifs
+(racial styles plus a wide catalogue of world/guild motifs), and you can add any
+other motif by name.
 
 ### 🧩 Trait Tracker
 A grid of every craftable item vs. every trait. Tick off the traits you've

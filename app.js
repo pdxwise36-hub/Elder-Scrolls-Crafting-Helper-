@@ -24,7 +24,10 @@
       esoPlus: false,
       otherReduction: 0,
       baseCount: 150, // base mats per item (CP160)
-      temperCount: 8 // improvement mats per item (max Temper Expertise)
+      // improvement mats consumed at each tier: Fine, Superior, Epic, Legendary
+      // (defaults assume max Temper Expertise). Crafting to a quality consumes
+      // every tier up to it.
+      tierCounts: [2, 3, 4, 8]
     }
   };
 
@@ -810,7 +813,7 @@
   }
 
   // ----- Crafting list & materials ----------------------------------------
-  var craftForm = { craft: "blacksmithing", item: null, style: null, trait: "", quality: "legendary", qty: 1 };
+  var craftForm = { craft: "blacksmithing", item: null, style: null, trait: "", quality: "legendary", enchant: "", qty: 1 };
 
   function styleOptions() {
     return allMotifs().map(function (m) { return m.name; });
@@ -862,9 +865,22 @@
     }).join("");
     qSel.value = craftForm.quality;
 
+    // Enchant glyphs valid for this item category
+    var slot = ESO.glyphSlotFor(group.traits);
+    var glyphs = ESO.GLYPHS.filter(function (g) { return g.slot === slot; });
+    var eSel = document.getElementById("c-enchant");
+    eSel.innerHTML =
+      '<option value="">No enchant</option>' +
+      glyphs.map(function (g) { return '<option value="' + g.name + '">' + g.name + "</option>"; }).join("");
+    if (craftForm.enchant && !glyphs.some(function (g) { return g.name === craftForm.enchant; })) {
+      craftForm.enchant = "";
+    }
+    eSel.value = craftForm.enchant;
+
     document.getElementById("c-qty").value = craftForm.qty;
     document.getElementById("c-basecount").value = state.settings.baseCount;
-    document.getElementById("c-tempercount").value = state.settings.temperCount;
+    var tc = state.settings.tierCounts || [2, 3, 4, 8];
+    for (var i = 0; i < 4; i++) document.getElementById("c-tier" + i).value = tc[i];
   }
 
   function addCraftItem() {
@@ -876,6 +892,7 @@
       style: craftForm.style,
       trait: craftForm.trait || null,
       quality: craftForm.quality,
+      enchant: craftForm.enchant || null,
       qty: Math.max(1, Number(craftForm.qty) || 1)
     });
     save();
@@ -900,21 +917,37 @@
       var t = ESO.traitsFor(group.traits).filter(function (x) { return x.name === entry.trait; })[0];
       if (t && t.mat) out.push({ name: t.mat, qty: 1 * qty, cat: "Trait" });
     }
+    // Quality: crafting to a quality consumes EVERY improvement tier up to it
+    // (a fresh item starts at Normal/white).
     var q = ESO.QUALITIES.filter(function (x) { return x.key === entry.quality; })[0];
     if (q && q.improveIndex >= 0) {
-      var temper = craft.improvement[q.improveIndex];
-      out.push({ name: temper, qty: (state.settings.temperCount || 0) * qty, cat: "Quality" });
+      var tc = state.settings.tierCounts || [2, 3, 4, 8];
+      for (var i = 0; i <= q.improveIndex; i++) {
+        var amt = (tc[i] || 0) * qty;
+        if (amt > 0) out.push({ name: craft.improvement[i], qty: amt, cat: "Quality" });
+      }
+    }
+    // Enchant: 1 potency + 1 essence + 1 aspect rune per glyph.
+    if (entry.enchant) {
+      var glyph = ESO.GLYPHS.filter(function (g) { return g.name === entry.enchant; })[0];
+      if (glyph) {
+        out.push({ name: ESO.POTENCY_RUNES[glyph.potency], qty: 1 * qty, cat: "Enchant" });
+        out.push({ name: glyph.essence + " (essence)", qty: 1 * qty, cat: "Enchant" });
+        var aspect = ESO.ASPECT_BY_QUALITY[entry.quality] || "Ta";
+        out.push({ name: aspect + " (aspect)", qty: 1 * qty, cat: "Enchant" });
+      }
     }
     return out;
   }
 
   // Category order + display labels for the grouped shopping list.
-  var CATEGORY_ORDER = ["Base", "Quality", "Trait", "Style"];
+  var CATEGORY_ORDER = ["Base", "Quality", "Trait", "Style", "Enchant"];
   var CATEGORY_LABEL = {
     Base: "Prime Materials",
     Quality: "Quality Materials",
     Trait: "Trait Materials",
-    Style: "Style Materials"
+    Style: "Style Materials",
+    Enchant: "Enchant Materials"
   };
 
   function groupedTotals() {
@@ -1012,6 +1045,7 @@
           '<div><span class="ce-title">' + entry.qty + "&times; " + entry.item +
           "</span> <span class=\"ce-sub\">" + craft.name + " · " + entry.style +
           (entry.trait ? " · " + entry.trait : " · no trait") + " · " + qualityName(entry.quality) +
+          (entry.enchant ? " · " + entry.enchant : "") +
           "</span></div>" +
           '<button class="btn ghost sm" data-craft-del="' + entry.id + '">Remove</button>' +
           "</div>" +
@@ -1214,6 +1248,7 @@
     document.getElementById("c-style").addEventListener("change", function (e) { craftForm.style = e.target.value; });
     document.getElementById("c-trait").addEventListener("change", function (e) { craftForm.trait = e.target.value; });
     document.getElementById("c-quality").addEventListener("change", function (e) { craftForm.quality = e.target.value; });
+    document.getElementById("c-enchant").addEventListener("change", function (e) { craftForm.enchant = e.target.value; });
     document.getElementById("c-qty").addEventListener("input", function (e) {
       craftForm.qty = Math.max(1, Number(e.target.value) || 1);
     });
@@ -1237,10 +1272,13 @@
       save();
       renderCraftList();
     });
-    document.getElementById("c-tempercount").addEventListener("input", function (e) {
-      state.settings.temperCount = Math.max(0, Number(e.target.value) || 0);
-      save();
-      renderCraftList();
+    [0, 1, 2, 3].forEach(function (i) {
+      document.getElementById("c-tier" + i).addEventListener("input", function (e) {
+        if (!state.settings.tierCounts) state.settings.tierCounts = [2, 3, 4, 8];
+        state.settings.tierCounts[i] = Math.max(0, Number(e.target.value) || 0);
+        save();
+        renderCraftList();
+      });
     });
 
     // Settings
