@@ -58,9 +58,9 @@ clipboard as a plain-text shopping list to mail to a crafter.
 ### 🎨 Motif Tracker
 A grid of motifs with a checkbox for each of the **14 chapters** (one per
 equipment slot). Tick what you've learned; a motif reads as fully known at 14/14,
-and *all* marks a whole motif at once. Comes preloaded with ~65 motifs
-(racial styles plus a wide catalogue of world/guild motifs), and you can add any
-other motif by name.
+and *all* marks a whole motif at once. Comes preloaded with the full
+catalogue of **136 motifs** (with their official Crafting Motif number and a
+"where to find" location for each), and you can add any other motif by name.
 
 ### 🧩 Trait Tracker
 A grid of every craftable item vs. every trait. Tick off the traits you've

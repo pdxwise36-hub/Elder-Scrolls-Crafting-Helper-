@@ -652,9 +652,17 @@ ol.plan-steps {
   color: var(--text-faint);
   font-weight: 400;
   white-space: nowrap;
-  max-width: 150px;
+  max-width: 170px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.motif-num {
+  display: inline-block;
+  min-width: 22px;
+  font-size: 10px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
 }
 .find-link {
   color: var(--gold);
