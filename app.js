@@ -829,7 +829,7 @@
   }
 
   // ----- Crafting list & materials ----------------------------------------
-  var craftForm = { craft: "blacksmithing", item: null, style: null, trait: "", quality: "legendary", enchant: "", qty: 1 };
+  var craftForm = { craft: "blacksmithing", item: null, style: null, trait: "", quality: "legendary", enchant: "", enchantQuality: "legendary", qty: 1 };
 
   function styleOptions() {
     return allMotifs().map(function (m) { return m.name; });
@@ -893,6 +893,14 @@
     }
     eSel.value = craftForm.enchant;
 
+    // Glyph quality (aspect rune) — independent of item quality
+    var eqSel = document.getElementById("c-enchant-quality");
+    eqSel.innerHTML = ESO.QUALITIES.map(function (q) {
+      return '<option value="' + q.key + '">' + q.name + "</option>";
+    }).join("");
+    eqSel.value = craftForm.enchantQuality;
+    eqSel.disabled = !craftForm.enchant;
+
     document.getElementById("c-qty").value = craftForm.qty;
     document.getElementById("c-basecount").value = state.settings.baseCount;
     var tc = state.settings.tierCounts || [2, 3, 4, 8];
@@ -909,6 +917,7 @@
       trait: craftForm.trait || null,
       quality: craftForm.quality,
       enchant: craftForm.enchant || null,
+      enchantQuality: craftForm.enchantQuality || craftForm.quality,
       qty: Math.max(1, Number(craftForm.qty) || 1)
     });
     save();
@@ -949,7 +958,7 @@
       if (glyph) {
         out.push({ name: ESO.POTENCY_RUNES[glyph.potency], qty: 1 * qty, cat: "Enchant" });
         out.push({ name: glyph.essence + " (essence)", qty: 1 * qty, cat: "Enchant" });
-        var aspect = ESO.ASPECT_BY_QUALITY[entry.quality] || "Ta";
+        var aspect = ESO.ASPECT_BY_QUALITY[entry.enchantQuality || entry.quality] || "Ta";
         out.push({ name: aspect + " (aspect)", qty: 1 * qty, cat: "Enchant" });
       }
     }
@@ -1061,7 +1070,9 @@
           '<div><span class="ce-title">' + entry.qty + "&times; " + entry.item +
           "</span> <span class=\"ce-sub\">" + craft.name + " · " + entry.style +
           (entry.trait ? " · " + entry.trait : " · no trait") + " · " + qualityName(entry.quality) +
-          (entry.enchant ? " · " + entry.enchant : "") +
+          (entry.enchant ? " · " + entry.enchant +
+            (entry.enchantQuality && entry.enchantQuality !== entry.quality
+              ? " (" + qualityName(entry.enchantQuality) + ")" : "") : "") +
           "</span></div>" +
           '<button class="btn ghost sm" data-craft-del="' + entry.id + '">Remove</button>' +
           "</div>" +
@@ -1264,7 +1275,11 @@
     document.getElementById("c-style").addEventListener("change", function (e) { craftForm.style = e.target.value; });
     document.getElementById("c-trait").addEventListener("change", function (e) { craftForm.trait = e.target.value; });
     document.getElementById("c-quality").addEventListener("change", function (e) { craftForm.quality = e.target.value; });
-    document.getElementById("c-enchant").addEventListener("change", function (e) { craftForm.enchant = e.target.value; });
+    document.getElementById("c-enchant").addEventListener("change", function (e) {
+      craftForm.enchant = e.target.value;
+      renderCraftForm(); // enable/disable glyph-quality select
+    });
+    document.getElementById("c-enchant-quality").addEventListener("change", function (e) { craftForm.enchantQuality = e.target.value; });
     document.getElementById("c-qty").addEventListener("input", function (e) {
       craftForm.qty = Math.max(1, Number(e.target.value) || 1);
     });
