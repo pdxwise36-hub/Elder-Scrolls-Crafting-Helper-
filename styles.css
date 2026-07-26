@@ -640,6 +640,36 @@ ol.plan-steps {
   font-size: 13px;
 }
 
+/* motif zone grouping */
+tr.zone-row th {
+  text-align: left;
+  background: var(--bg);
+  color: var(--gold-bright);
+  font-family: Georgia, serif;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 10px;
+  position: sticky;
+  left: 0;
+}
+tr.zone-row:hover th {
+  background: var(--bg-panel-2);
+}
+.zone-toggle {
+  display: inline-block;
+  width: 14px;
+  color: var(--gold);
+  font-size: 11px;
+}
+.zone-count {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 400;
+  font-family: "Segoe UI", sans-serif;
+  margin-left: 6px;
+}
+
 /* motif name + where-to-find */
 .motif-name {
   display: flex;

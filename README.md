@@ -60,7 +60,10 @@ A grid of motifs with a checkbox for each of the **14 chapters** (one per
 equipment slot). Tick what you've learned; a motif reads as fully known at 14/14,
 and *all* marks a whole motif at once. Comes preloaded with the full
 catalogue of **136 motifs** (with their official Crafting Motif number and a
-"where to find" location for each), and you can add any other motif by name.
+"where to find" location for each), **grouped by their 39 source zones** (Base
+Game, Morrowind, Summerset, Elsweyr, Necrom, Gold Road, Holiday Events, Crown
+Store …). Each zone has a collapse toggle and a completion count, with
+Collapse-all / Expand-all controls. Add any other motif by name.
 
 ### 🧩 Trait Tracker
 A grid of every craftable item vs. every trait. Tick off the traits you've

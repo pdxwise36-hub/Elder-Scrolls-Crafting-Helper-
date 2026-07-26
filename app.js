@@ -18,6 +18,7 @@
     plan: [], // research shopping list: [{ craft, item, trait }]
     motifs: {}, // learned motif chapters: { "Motif|Slot": true }
     customMotifs: [], // user-added motif names
+    collapsedZones: {}, // { zoneName: true } for hidden motif zones
     craftList: [], // items to craft: [{ id, craft, item, style, trait|null, quality, qty }]
     settings: {
       passive: { blacksmithing: 4, clothing: 4, woodworking: 4, jewelry: 4 },
@@ -45,6 +46,7 @@
         plan: parsed.plan || [],
         motifs: parsed.motifs || {},
         customMotifs: parsed.customMotifs || [],
+        collapsedZones: parsed.collapsedZones || {},
         craftList: parsed.craftList || [],
         settings: Object.assign(clone(defaultState.settings), parsed.settings || {})
       };
@@ -750,10 +752,10 @@
   // ----- Motif tracker ----------------------------------------------------
   function allMotifs() {
     var list = ESO.MOTIFS.map(function (m) {
-      return { name: m.name, num: m.num || null, stone: m.stone, src: m.src || null, custom: false };
+      return { name: m.name, num: m.num || null, zone: m.zone || "Other", stone: m.stone, src: m.src || null, custom: false };
     });
     state.customMotifs.forEach(function (name) {
-      list.push({ name: name, num: null, stone: null, src: null, custom: true });
+      list.push({ name: name, num: null, zone: "Custom", stone: null, src: null, custom: true });
     });
     return list;
   }
@@ -780,50 +782,78 @@
     return m && m.stone ? m.stone : motifName + " Style Item";
   }
 
+  function escAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  function motifRowHtml(motif, slots) {
+    var count = motifChaptersKnown(motif.name);
+    var full = count === slots.length;
+    var tip = motif.custom
+      ? "Custom motif"
+      : (motif.num ? "Crafting Motif " + motif.num + " · " : "") +
+        (motif.stone ? "Style item: " + motif.stone : "Style item varies") +
+        (motif.src ? " · " + motif.src : "");
+    var html =
+      '<tr><th class="item-col" title="' + escAttr(tip) + '">' +
+      '<div class="motif-name">' +
+      (motif.num ? '<span class="motif-num">' + motif.num + "</span> " : "") +
+      motif.name + (full ? " ✓" : "") +
+      ' <a class="find-link" href="' + motifFindUrl(motif.name) +
+      '" target="_blank" rel="noopener" title="Where to find (opens web search)">↗</a></div>' +
+      (motif.src ? '<div class="motif-src" title="' + escAttr(motif.src) + '">' + motif.src + "</div>" : "") +
+      "</th>";
+    slots.forEach(function (s) {
+      var on = !!state.motifs[motifKey(motif.name, s)];
+      html +=
+        '<td><input type="checkbox" data-motif="' + escAttr(motif.name) +
+        '" data-slot="' + s + '"' + (on ? " checked" : "") + " /></td>";
+    });
+    html += '<td class="count">' + count + "/" + slots.length + "</td>";
+    html +=
+      '<td><button class="link-btn" data-motif-all="' + escAttr(motif.name) + '">' +
+      (full ? "clear" : "all") + "</button>" +
+      (motif.custom
+        ? '<button class="link-btn danger" data-motif-del="' + escAttr(motif.name) + '">del</button>'
+        : "") +
+      "</td></tr>";
+    return html;
+  }
+
   function renderMotifs() {
     var wrap = document.getElementById("motif-wrap");
     var slots = ESO.MOTIF_SLOTS;
+    var colspan = slots.length + 3;
+
+    // group motifs by zone, preserving first-seen order
+    var order = [];
+    var byZone = {};
+    allMotifs().forEach(function (m) {
+      if (!byZone[m.zone]) { byZone[m.zone] = []; order.push(m.zone); }
+      byZone[m.zone].push(m);
+    });
+
     var html = '<table class="matrix"><thead><tr>';
     html += '<th class="item-col">Motif</th>';
-    slots.forEach(function (s) {
-      html += '<th title="' + s + '">' + s.slice(0, 3) + "</th>";
-    });
+    slots.forEach(function (s) { html += '<th title="' + s + '">' + s.slice(0, 3) + "</th>"; });
     html += "<th>Known</th><th></th></tr></thead><tbody>";
 
-    allMotifs().forEach(function (motif) {
-      var count = motifChaptersKnown(motif.name);
-      var full = count === slots.length;
-      var tip = motif.custom
-        ? "Custom motif"
-        : (motif.num ? "Crafting Motif " + motif.num + " · " : "") +
-          (motif.stone ? "Style item: " + motif.stone : "Style item varies") +
-          (motif.src ? " · " + motif.src : "");
-      html += "<tr>";
+    order.forEach(function (zone) {
+      var list = byZone[zone];
+      var complete = list.filter(function (m) {
+        return motifChaptersKnown(m.name) === slots.length;
+      }).length;
+      var collapsed = !!state.collapsedZones[zone];
       html +=
-        '<th class="item-col" title="' + tip.replace(/"/g, "&quot;") + '">' +
-        '<div class="motif-name">' +
-        (motif.num ? '<span class="motif-num">' + motif.num + "</span> " : "") +
-        motif.name + (full ? " ✓" : "") +
-        ' <a class="find-link" href="' + motifFindUrl(motif.name) +
-        '" target="_blank" rel="noopener" title="Where to find (opens web search)">↗</a></div>' +
-        (motif.src ? '<div class="motif-src" title="' + motif.src.replace(/"/g, "&quot;") + '">' + motif.src + "</div>" : "") +
-        "</th>";
-      slots.forEach(function (s) {
-        var on = !!state.motifs[motifKey(motif.name, s)];
-        html +=
-          '<td><input type="checkbox" data-motif="' + motif.name +
-          '" data-slot="' + s + '"' + (on ? " checked" : "") + " /></td>";
-      });
-      html += '<td class="count">' + count + "/" + slots.length + "</td>";
-      html +=
-        '<td><button class="link-btn" data-motif-all="' + motif.name + '">' +
-        (full ? "clear" : "all") + "</button>" +
-        (motif.custom
-          ? '<button class="link-btn danger" data-motif-del="' + motif.name + '">del</button>'
-          : "") +
-        "</td>";
-      html += "</tr>";
+        '<tr class="zone-row" data-zone="' + escAttr(zone) + '">' +
+        '<th colspan="' + colspan + '">' +
+        '<span class="zone-toggle">' + (collapsed ? "▸" : "▾") + "</span> " +
+        zone + ' <span class="zone-count">' + complete + "/" + list.length + " complete</span></th></tr>";
+      if (!collapsed) {
+        list.forEach(function (m) { html += motifRowHtml(m, slots); });
+      }
     });
+
     html += "</tbody></table>";
     wrap.innerHTML = html;
   }
@@ -1226,6 +1256,15 @@
       renderMotifs();
     });
     document.getElementById("motif-wrap").addEventListener("click", function (e) {
+      var zoneRow = e.target.closest(".zone-row");
+      if (zoneRow) {
+        var z = zoneRow.dataset.zone;
+        if (state.collapsedZones[z]) delete state.collapsedZones[z];
+        else state.collapsedZones[z] = true;
+        save();
+        renderMotifs();
+        return;
+      }
       var allBtn = e.target.closest("button[data-motif-all]");
       var delBtn = e.target.closest("button[data-motif-del]");
       if (allBtn) {
@@ -1245,6 +1284,18 @@
         renderMotifs();
         renderCraftForm();
       }
+    });
+    document.getElementById("motif-collapse-all").addEventListener("click", function () {
+      var zones = {};
+      allMotifs().forEach(function (m) { zones[m.zone] = true; });
+      state.collapsedZones = zones;
+      save();
+      renderMotifs();
+    });
+    document.getElementById("motif-expand-all").addEventListener("click", function () {
+      state.collapsedZones = {};
+      save();
+      renderMotifs();
     });
     document.getElementById("motif-add").addEventListener("click", function () {
       var inp = document.getElementById("motif-add-name");
@@ -1372,6 +1423,7 @@
           plan: data.plan || [],
           motifs: data.motifs || {},
           customMotifs: data.customMotifs || [],
+          collapsedZones: data.collapsedZones || {},
           craftList: data.craftList || [],
           settings: Object.assign(clone(defaultState.settings), data.settings || {})
         };
